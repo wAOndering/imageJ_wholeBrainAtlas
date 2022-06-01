@@ -133,6 +133,14 @@ class combineFile():
 		self.summary = glob.glob(self.mainDir+os.sep+'*'+self.identifier+'*V2.xlsx',  recursive=True)[0]	#get the summary
 		#### be careful not to have duplicate file for this 
 
+	def flagNAN(self):
+		tmp = pd.read_csv(self.measureFile)
+		tmpNAN = tmp[np.isnan(tmp['IntDen'])]
+
+		if len(tmpNAN) != 0: 
+			alpha = pd.DataFrame({'file': [self.measureFile], 'rows (n)': [len(tmp)], 'rowsNAN (n)': [len(tmpNAN)]})
+			return alpha
+	
 
 	def reIndexCreation(self):
 		
@@ -209,7 +217,12 @@ class combineFile():
 
 mypath = r'Y:\Madalyn\Analysis'
 files = glob.glob(mypath+'/*/**/*.csv',  recursive=True)
-# t = combineFile(files[29])
+for i, j in enumerate(files):
+	print(i,j)
+
+
+t = combineFile(files[21])
+tmp = t.flagNAN()
 # # t.identifier
 # t.combineAreaMeasure()
 
@@ -217,16 +230,21 @@ files = glob.glob(mypath+'/*/**/*.csv',  recursive=True)
 
 masterFile = []
 ERROR = []
+filesWithNan = []
 for i in files:
 	print(i)
 	try:
 		tmpDat = combineFile(i)
 		tmp = tmpDat.combineAreaMeasure()
 		masterFile.append(tmp)
+		tmpNaN = tmpDat.flagNAN()
+		filesWithNan.append(tmpNaN)
 	except:
 		print('ERROR: the file listed were not processed: ')
 		print(i)
 		ERROR.append(i)
+filesWithNan = pd.concat(filesWithNan)
+filesWithNan.to_csv(mypath+os.sep+'flagedNAN.csv')
 masterFile = pd.concat(masterFile)
 
 ## create a unique index reference
