@@ -280,10 +280,12 @@ toExclude = pd.read_csv(r"Y:\Madalyn\Analysis\toExclude.csv")
 masterFile = pd.read_csv(r"Y:\Madalyn\Analysis\masterFile.csv")
 
 for i,j in toExclude.iterrows():
-	print(j['list'])
-
-masterFile[masterFile['File'].str.contains('1917_0021') & masterFile['File'].str.contains('1917_0021')]
-
+	print(j)
+	if type(j['side']) != str:
+		masterFile = masterFile[~(masterFile['File'].str.contains(j['list']))]
+	else:
+		masterFile = masterFile[~(masterFile['File'].str.contains(j['list']) & masterFile['Group'].str.contains(str(j['side'])))]
+masterFile.to_csv(mypath+os.sep+'masterFile_withExclusion.csv')
 
 
 ############################################
@@ -300,15 +302,15 @@ subSetBrainRegion = ['ACA', 'ACB', 'PL', 'ILA', 'ORB', 'AI']
 for i in subSetBrainRegion:
 	sebSet = masterFile[masterFile['Acronym6'] == i]
 	for j in myMeasure:
-		try:
-			print(j)
-			myFig = i+'_'+j
-			params, paramsNest, nobs, nmax = paramsForCustomPlot(data=sebSet, variableLabel='Memory reactivated', subjectLabel='sID', valueLabel= j)
-			customPlot(params, paramsNest, dirName=r'Y:\Madalyn\Analysis\outputs', figName=myFig)
-			plt.close('all')
-		except:
-			print('ERROR: the file listed were not processed: ')
-			print(i,j)
+		# try:
+		print(j)
+		myFig = i+'_'+j
+		params, paramsNest, nobs, nmax = paramsForCustomPlot(data=sebSet, variableLabel='Memory reactivated', subjectLabel='sID', valueLabel= j)
+		customPlot(params, paramsNest, dirName=r'Y:\Madalyn\Analysis\outputs_withExclusion', figName=myFig)
+		plt.close('all')
+		# except:
+		# 	print('ERROR: the file listed were not processed: ')
+		# 	print(i,j)
 
 
 
