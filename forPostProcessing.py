@@ -2,6 +2,10 @@ import glob
 import pandas as pd
 import os
 import warnings
+from cycler import cycler
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import seaborn as sns 
 warnings.filterwarnings("ignore")
 
 ## TODO recreate the index from the excel file
@@ -114,7 +118,8 @@ def customPlot(params, paramsNest, dirName='C:/Users/Windows/Desktop/MAINDATA_OU
 
     # property to export the plot 
     # best output and import into illustrator are svg 
-    return plt.savefig(dirName+os.sep+figName+".png")#,     plt.show(block=False)
+    plt.savefig(dirName+os.sep+figName+".png")#,     plt.show(block=False)
+    plt.close()
 
 class combineFile():
 	'''
@@ -128,7 +133,7 @@ class combineFile():
 		self.plate = filePath.split(os.sep)[-1].split('_')[1].split('.')[0]
 		self.identifier = self.sID+'_'+self.plate
 		self.mainDir = os.path.dirname(filePath)
-		self.measureFile = glob.glob(self.mainDir+os.sep+'*'+self.identifier+'*.csv',  recursive=True)[0] #get the list of measures
+		self.measureFile = glob.glob(self.mainDir+os.sep+'*'+self.identifier+'*V2.csv',  recursive=True)[0] #get the list of measures
 		self.regionFile = glob.glob(self.mainDir+os.sep+'*'+self.identifier+'*.txt',  recursive=True)[0] #get the list of particles and their principal regions
 		self.summary = glob.glob(self.mainDir+os.sep+'*'+self.identifier+'*V2.xlsx',  recursive=True)[0]	#get the summary
 		#### be careful not to have duplicate file for this 
@@ -216,15 +221,15 @@ class combineFile():
 
 
 mypath = r'Y:\Madalyn\Analysis'
-files = glob.glob(mypath+'/*/**/*.csv',  recursive=True)
+files = glob.glob(mypath+'/*/**/*V2.csv',  recursive=True)
 for i, j in enumerate(files):
 	print(i,j)
 
 
-t = combineFile(files[21])
-tmp = t.flagNAN()
-# # t.identifier
-# t.combineAreaMeasure()
+# t = combineFile(files[21])
+# tmp = t.flagNAN()
+# # # t.identifier
+# # t.combineAreaMeasure()
 
 
 
@@ -237,14 +242,14 @@ for i in files:
 		tmpDat = combineFile(i)
 		tmp = tmpDat.combineAreaMeasure()
 		masterFile.append(tmp)
-		tmpNaN = tmpDat.flagNAN()
-		filesWithNan.append(tmpNaN)
+		# tmpNaN = tmpDat.flagNAN()
+		# filesWithNan.append(tmpNaN)
 	except:
 		print('ERROR: the file listed were not processed: ')
 		print(i)
 		ERROR.append(i)
-filesWithNan = pd.concat(filesWithNan)
-filesWithNan.to_csv(mypath+os.sep+'flagedNAN.csv')
+# filesWithNan = pd.concat(filesWithNan)
+# filesWithNan.to_csv(mypath+os.sep+'flagedNAN.csv')
 masterFile = pd.concat(masterFile)
 
 ## create a unique index reference
@@ -265,8 +270,20 @@ masterFile = masterFile.dropna(subset=['c3'])
 
 
 ## save the files
-masterFile.to_csv(mypath+os.sep+'masterFileUPDATED.csv')
+masterFile.to_csv(mypath+os.sep+'masterFile.csv')
 pd.DataFrame({'err':ERROR}).to_csv(mypath+os.sep+'error.csv')
+
+############################################
+###### Filtering data out
+############################################
+toExclude = pd.read_csv(r"Y:\Madalyn\Analysis\toExclude.csv")
+masterFile = pd.read_csv(r"Y:\Madalyn\Analysis\masterFile.csv")
+
+for i,j in toExclude.iterrows():
+	print(j['list'])
+
+masterFile[masterFile['File'].str.contains('1917_0021') & masterFile['File'].str.contains('1917_0021')]
+
 
 
 ############################################
@@ -276,21 +293,22 @@ pd.DataFrame({'err':ERROR}).to_csv(mypath+os.sep+'error.csv')
 myMeasure = masterFile.columns
 for i,j in enumerate(myMeasure):
 	print(i,j)
-myMeasure = myMeasure[11:46]
-
-
-
-### get a subset dataset for given brain region
-subSetBrainRegion = masterFile['Acronym6'].unique()
+myMeasure = myMeasure[12:48]
+## get a subset dataset for given brain region
+subSetBrainRegion = masterFile['Acronym6'].unique()[1:]
+subSetBrainRegion = ['ACA', 'ACB', 'PL', 'ILA', 'ORB', 'AI']
 for i in subSetBrainRegion:
 	sebSet = masterFile[masterFile['Acronym6'] == i]
-	
 	for j in myMeasure:
-		myFig = i+'_'+j
-		print(myFig)
-
-		params, paramsNest, nobs, nmax = paramsForCustomPlot(data=sebSet, variableLabel='Memory reactivated', subjectLabel='sID', valueLabel= j)
-		customPlot(params, paramsNest, dirName=r'Y:\Madalyn\Analysis\outputs', figName=myFig)
+		try:
+			print(j)
+			myFig = i+'_'+j
+			params, paramsNest, nobs, nmax = paramsForCustomPlot(data=sebSet, variableLabel='Memory reactivated', subjectLabel='sID', valueLabel= j)
+			customPlot(params, paramsNest, dirName=r'Y:\Madalyn\Analysis\outputs', figName=myFig)
+			plt.close('all')
+		except:
+			print('ERROR: the file listed were not processed: ')
+			print(i,j)
 
 
 
