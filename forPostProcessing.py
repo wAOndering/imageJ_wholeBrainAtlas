@@ -122,100 +122,100 @@ def customPlot(params, paramsNest, dirName='C:/Users/Windows/Desktop/MAINDATA_OU
     plt.close()
 
 class combineFile():
-	'''
-	this class is to combine files for a given sample/subject
-	if there are mutliple subfolders or subregion they will be incorporated as well
-	this should be modified to be incorporated for the tiff of interest
-	'''
-	def __init__(self, filePath):
-		self.filePath = filePath # get all the tiff file those should be the base ref 
-		self.sID = filePath.split(os.sep)[-1].split('_')[0]
-		self.plate = filePath.split(os.sep)[-1].split('_')[1].split('.')[0]
-		self.identifier = self.sID+'_'+self.plate
-		self.mainDir = os.path.dirname(filePath)
-		self.measureFile = glob.glob(self.mainDir+os.sep+'*'+self.identifier+'*V2.csv',  recursive=True)[0] #get the list of measures
-		self.regionFile = glob.glob(self.mainDir+os.sep+'*'+self.identifier+'*.txt',  recursive=True)[0] #get the list of particles and their principal regions
-		self.summary = glob.glob(self.mainDir+os.sep+'*'+self.identifier+'*V2.xlsx',  recursive=True)[0]	#get the summary
-		#### be careful not to have duplicate file for this 
+    '''
+    this class is to combine files for a given sample/subject
+    if there are mutliple subfolders or subregion they will be incorporated as well
+    this should be modified to be incorporated for the tiff of interest
+    '''
+    def __init__(self, filePath):
+        self.filePath = filePath # get all the tiff file those should be the base ref 
+        self.sID = filePath.split(os.sep)[-1].split('_')[0]
+        self.plate = filePath.split(os.sep)[-1].split('_')[1].split('.')[0]
+        self.identifier = self.sID+'_'+self.plate
+        self.mainDir = os.path.dirname(filePath)
+        self.measureFile = glob.glob(self.mainDir+os.sep+'*'+self.identifier+'*V2.csv',  recursive=True)[0] #get the list of measures
+        self.regionFile = glob.glob(self.mainDir+os.sep+'*'+self.identifier+'*.txt',  recursive=True)[0] #get the list of particles and their principal regions
+        self.summary = glob.glob(self.mainDir+os.sep+'*'+self.identifier+'*V2.xlsx',  recursive=True)[0]    #get the summary
+        #### be careful not to have duplicate file for this 
 
-	def flagNAN(self):
-		tmp = pd.read_csv(self.measureFile)
-		tmpNAN = tmp[np.isnan(tmp['IntDen'])]
+    def flagNAN(self):
+        tmp = pd.read_csv(self.measureFile)
+        tmpNAN = tmp[np.isnan(tmp['IntDen'])]
 
-		if len(tmpNAN) != 0: 
-			alpha = pd.DataFrame({'file': [self.measureFile], 'rows (n)': [len(tmp)], 'rowsNAN (n)': [len(tmpNAN)]})
-			return alpha
-	
+        if len(tmpNAN) != 0: 
+            alpha = pd.DataFrame({'file': [self.measureFile], 'rows (n)': [len(tmp)], 'rowsNAN (n)': [len(tmpNAN)]})
+            return alpha
+    
 
-	def reIndexCreation(self):
-		
-		def aggCol(df, cols):
-			''' Function to aggreegate columns 
-			df: is a dataframe
-			col: common name element that will be used to identify the column to be aggregated
-			'''
-			acro_l = [x for x in tmp.columns if cols in x]
-			tmpName = cols
-			df[acro_l] = df[acro_l].astype('str')
-			df[tmpName] = df[acro_l].T.agg('~'.join)
-			df.drop(acro_l, axis=1, inplace=True)
+    def reIndexCreation(self):
+        
+        def aggCol(df, cols):
+            ''' Function to aggreegate columns 
+            df: is a dataframe
+            col: common name element that will be used to identify the column to be aggregated
+            '''
+            acro_l = [x for x in tmp.columns if cols in x]
+            tmpName = cols
+            df[acro_l] = df[acro_l].astype('str')
+            df[tmpName] = df[acro_l].T.agg('~'.join)
+            df.drop(acro_l, axis=1, inplace=True)
 
-			return df
+            return df
 
-		## TODO chack the structure and how are the summary saved is summary is a list or not
-		# if len (self.summary) > 1:
-			# print('see comments to deal with this specific situation where mutliple analysis are saved per animal and plate')
+        ## TODO chack the structure and how are the summary saved is summary is a list or not
+        # if len (self.summary) > 1:
+            # print('see comments to deal with this specific situation where mutliple analysis are saved per animal and plate')
 
-		tmp = pd.read_excel(self.summary)
-		## deal with individual files within excel folder espcially relevant when summary have been concatenated
-		# sectionSummarized = tmp['File'].unique()
+        tmp = pd.read_excel(self.summary)
+        ## deal with individual files within excel folder espcially relevant when summary have been concatenated
+        # sectionSummarized = tmp['File'].unique()
 
-		### prevent abnormal assignment when there is multiple excel files per folders
-		tmp = tmp[tmp['File'].str.contains(self.identifier)]
-
-
-		##section to recreate the index list 
-		## first for all non empty brain region we need to add 1 to the number of particle to expand by this number
-		## given the method present 
-		tmp['Particle Count'] = tmp['Particle Count'] + 1
-		# tmp.loc[tmp['Particle Count'] == 0, 'Particle Count'] = tmp.loc[tmp['Particle Count'] == 0, 'Particle Count']+1
-		for i in ['Acronym', 'Name']:
-			tmp = aggCol(tmp, i)
-
-		## next merge columns to facilitate the expansion of the table
-		reps = tmp['Particle Count'].tolist()# create the list of repetition that should be performed 
-		tmp = tmp.reset_index() # IMPORTANT to keep track of the original indexing
-		tmp = tmp.loc[np.repeat(tmp.index.values, reps)]
-		tmp = tmp.reset_index(drop=True) 
-
-		return tmp
-
-	def combineAreaMeasure(self):
-		
-		def splitCol(df, col):
-			''' Function to 
-			'''
-			df = df.join(df[col].str.split('~', expand=True).add_prefix(col))
-
-			return df
+        ### prevent abnormal assignment when there is multiple excel files per folders
+        tmp = tmp[tmp['File'].str.contains(self.identifier)]
 
 
-		# make it specific for the file of interest for the brain region of interst
-		tmp = self.reIndexCreation()
-		tmpMeas = pd.read_csv(self.measureFile)
-		tmpArea = pd.read_csv(self.regionFile, delimiter='/', names=['c1','c2','c3'])
-		test = pd.concat([tmp, tmpMeas, tmpArea], axis=1)
+        ##section to recreate the index list 
+        ## first for all non empty brain region we need to add 1 to the number of particle to expand by this number
+        ## given the method present 
+        tmp['Particle Count'] = tmp['Particle Count'] + 1
+        # tmp.loc[tmp['Particle Count'] == 0, 'Particle Count'] = tmp.loc[tmp['Particle Count'] == 0, 'Particle Count']+1
+        for i in ['Acronym', 'Name']:
+            tmp = aggCol(tmp, i)
 
-		# get the final file
-		test['sID'] = self.sID
-		test['Brain section'] = self.plate
-		## sanitiy check to see if the index reconstruction is actually working
-		# b = test[test['Particle Count']==1]
+        ## next merge columns to facilitate the expansion of the table
+        reps = tmp['Particle Count'].tolist()# create the list of repetition that should be performed 
+        tmp = tmp.reset_index() # IMPORTANT to keep track of the original indexing
+        tmp = tmp.loc[np.repeat(tmp.index.values, reps)]
+        tmp = tmp.reset_index(drop=True) 
 
-		for i in ['Acronym', 'Name']:
-			test = splitCol(test, i)
+        return tmp
 
-		return test
+    def combineAreaMeasure(self):
+        
+        def splitCol(df, col):
+            ''' Function to 
+            '''
+            df = df.join(df[col].str.split('~', expand=True).add_prefix(col))
+
+            return df
+
+
+        # make it specific for the file of interest for the brain region of interst
+        tmp = self.reIndexCreation()
+        tmpMeas = pd.read_csv(self.measureFile)
+        tmpArea = pd.read_csv(self.regionFile, delimiter='/', names=['c1','c2','c3'])
+        test = pd.concat([tmp, tmpMeas, tmpArea], axis=1)
+
+        # get the final file
+        test['sID'] = self.sID
+        test['Brain section'] = self.plate
+        ## sanitiy check to see if the index reconstruction is actually working
+        # b = test[test['Particle Count']==1]
+
+        for i in ['Acronym', 'Name']:
+            test = splitCol(test, i)
+
+        return test
 
 
 
@@ -223,7 +223,7 @@ class combineFile():
 mypath = r'Y:\Madalyn\Analysis'
 files = glob.glob(mypath+'/*/**/*V2.csv',  recursive=True)
 for i, j in enumerate(files):
-	print(i,j)
+    print(i,j)
 
 
 # t = combineFile(files[21])
@@ -237,17 +237,17 @@ masterFile = []
 ERROR = []
 filesWithNan = []
 for i in files:
-	print(i)
-	try:
-		tmpDat = combineFile(i)
-		tmp = tmpDat.combineAreaMeasure()
-		masterFile.append(tmp)
-		# tmpNaN = tmpDat.flagNAN()
-		# filesWithNan.append(tmpNaN)
-	except:
-		print('ERROR: the file listed were not processed: ')
-		print(i)
-		ERROR.append(i)
+    print(i)
+    try:
+        tmpDat = combineFile(i)
+        tmp = tmpDat.combineAreaMeasure()
+        masterFile.append(tmp)
+        # tmpNaN = tmpDat.flagNAN()
+        # filesWithNan.append(tmpNaN)
+    except:
+        print('ERROR: the file listed were not processed: ')
+        print(i)
+        ERROR.append(i)
 # filesWithNan = pd.concat(filesWithNan)
 # filesWithNan.to_csv(mypath+os.sep+'flagedNAN.csv')
 masterFile = pd.concat(masterFile)
@@ -280,11 +280,11 @@ toExclude = pd.read_csv(r"Y:\Madalyn\Analysis\toExclude.csv")
 masterFile = pd.read_csv(r"Y:\Madalyn\Analysis\masterFile.csv")
 
 for i,j in toExclude.iterrows():
-	print(j)
-	if type(j['side']) != str:
-		masterFile = masterFile[~(masterFile['File'].str.contains(j['list']))]
-	else:
-		masterFile = masterFile[~(masterFile['File'].str.contains(j['list']) & masterFile['Group'].str.contains(str(j['side'])))]
+    print(j)
+    if type(j['side']) != str:
+        masterFile = masterFile[~(masterFile['File'].str.contains(j['list']))]
+    else:
+        masterFile = masterFile[~(masterFile['File'].str.contains(j['list']) & masterFile['Group'].str.contains(str(j['side'])))]
 masterFile.to_csv(mypath+os.sep+'masterFile_withExclusion.csv')
 
 
@@ -294,23 +294,23 @@ masterFile.to_csv(mypath+os.sep+'masterFile_withExclusion.csv')
 #### List of potential measure to itterate over
 myMeasure = masterFile.columns
 for i,j in enumerate(myMeasure):
-	print(i,j)
+    print(i,j)
 myMeasure = myMeasure[12:48]
 ## get a subset dataset for given brain region
 subSetBrainRegion = masterFile['Acronym6'].unique()[1:]
 subSetBrainRegion = ['ACA', 'ACB', 'PL', 'ILA', 'ORB', 'AI']
 for i in subSetBrainRegion:
-	sebSet = masterFile[masterFile['Acronym6'] == i]
-	for j in myMeasure:
-		# try:
-		print(j)
-		myFig = i+'_'+j
-		params, paramsNest, nobs, nmax = paramsForCustomPlot(data=sebSet, variableLabel='Memory reactivated', subjectLabel='sID', valueLabel= j)
-		customPlot(params, paramsNest, dirName=r'Y:\Madalyn\Analysis\outputs_withExclusion', figName=myFig)
-		plt.close('all')
-		# except:
-		# 	print('ERROR: the file listed were not processed: ')
-		# 	print(i,j)
+    sebSet = masterFile[masterFile['Acronym6'] == i]
+    for j in myMeasure:
+        # try:
+        print(j)
+        myFig = i+'_'+j
+        params, paramsNest, nobs, nmax = paramsForCustomPlot(data=sebSet, variableLabel='Memory reactivated', subjectLabel='sID', valueLabel= j)
+        customPlot(params, paramsNest, dirName=r'Y:\Madalyn\Analysis\outputs_withExclusion', figName=myFig)
+        plt.close('all')
+        # except:
+        #   print('ERROR: the file listed were not processed: ')
+        #   print(i,j)
 
 
 ############################################
@@ -320,32 +320,36 @@ from scipy.stats import ks_2samp
 subSetBrainRegion = ['ACA', 'ACB', 'PL', 'ILA', 'ORB', 'AI']
 
 for i in subSetBrainRegion:
-	sebSet = masterFile[masterFile['Acronym6'] == i]
+    sebSet = masterFile[masterFile['Acronym6'] == i]
 
-	fig, ax = plt.subplots(1,3, figsize=[15,5])
-	sns.kdeplot(data = sebSet, x='Mean', hue='Memory reactivated', ax =ax[0])
-	sns.kdeplot(data = sebSet, x='Mean', hue='Memory reactivated', cumulative =True, ax =ax[1], common_norm=False, common_grid=True)
-	ax[0].set_title('KDE distribution plot')
-	ax[1].set_title('Cummulative distribution')
-	ax[2].set_title('2 Sample KS test')
-	ax[2].set_axis_off()
-	plt.suptitle(i+' mean pixel intensity')
+    ### Uncomment this section to 
+    # sebSet = sebSet.groupby(['sID', 'Memory reactivated']).agg({'Mean':np.mean})
+    # sebSet = quickConversion(sebSet)
+    # sebSet = sebSet.sort_values(['Memory reactivated'])
+    # mpl.rcParams['axes.prop_cycle'] = cycler(color=['#fc8d62','#66c2a5','#8da0cb'])
+
+    fig, ax = plt.subplots(1,3, figsize=[15,5])
+    sns.kdeplot(data = sebSet, x='Mean', hue='Memory reactivated', ax =ax[0])
+    sns.kdeplot(data = sebSet, x='Mean', hue='Memory reactivated', cumulative =True, ax =ax[1], common_norm=False, common_grid=True)
+    ax[0].set_title('KDE distribution plot')
+    ax[1].set_title('Cummulative distribution')
+    ax[2].set_title('2 Sample KS test')
+    ax[2].set_axis_off()
+    plt.suptitle(i+' mean pixel intensity')
+
+    gp1 = sebSet.loc[sebSet['Memory reactivated'] == 'saline', 'Mean']
+    gp2 = sebSet.loc[sebSet['Memory reactivated'] == 'Meth', 'Mean']
+    gp3 = sebSet.loc[sebSet['Memory reactivated'] == 'Heroin', 'Mean']
+
+    vs1_2 = 'Saline vs Meth, pval= '+'{0:.2g}'.format(ks_2samp(gp1, gp2)[1])
+    vs1_3 = 'Saline vs Heroin, pval= '+'{0:.2g}'.format(ks_2samp(gp1, gp3)[1])
+    vs2_3 = 'Meth vs Heroin, pval= '+'{0:.2g}'.format(ks_2samp(gp2, gp3)[1])
+
+    ax[2].text(0, 0.9, vs1_2)
+    ax[2].text(0, 0.85, vs1_3)
+    ax[2].text(0, 0.8, vs2_3)
+    
+    plt.savefig(r'Y:\Madalyn\Analysis\outputs_Distribution'+os.sep+i+'_mean.png')
 
 
-
-	gp1 = sebSet.loc[sebSet['Memory reactivated'] == 'saline', 'Mean']
-	gp2 = sebSet.loc[sebSet['Memory reactivated'] == 'Meth', 'Mean']
-	gp3 = sebSet.loc[sebSet['Memory reactivated'] == 'Heroin', 'Mean']
-
-	vs1_2 = 'Saline vs Meth, pval= '+'{0:.2g}'.format(ks_2samp(gp1, gp2)[1])
-	vs1_3 = 'Saline vs Heroin, pval= '+'{0:.2g}'.format(ks_2samp(gp1, gp3)[1])
-	vs2_3 = 'Meth vs Heroin, pval= '+'{0:.2g}'.format(ks_2samp(gp2, gp3)[1])
-
-	ax[2].text(0, 0.9, vs1_2)
-	ax[2].text(0, 0.85, vs1_3)
-	ax[2].text(0, 0.8, vs2_3)
-	
-	plt.savefig(r'Y:\Madalyn\Analysis\outputs_Distribution'+os.sep+i+'_mean.png')
-
-
-	# https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.ks_2samp.html#scipy.stats.ks_2samp
+    # https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.ks_2samp.html#scipy.stats.ks_2samp
