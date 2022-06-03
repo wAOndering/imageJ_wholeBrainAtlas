@@ -313,4 +313,39 @@ for i in subSetBrainRegion:
 		# 	print(i,j)
 
 
+############################################
+###### For graphing with distribution
+############################################
+from scipy.stats import ks_2samp
+subSetBrainRegion = ['ACA', 'ACB', 'PL', 'ILA', 'ORB', 'AI']
 
+for i in subSetBrainRegion:
+	sebSet = masterFile[masterFile['Acronym6'] == i]
+
+	fig, ax = plt.subplots(1,3, figsize=[15,5])
+	sns.kdeplot(data = sebSet, x='Mean', hue='Memory reactivated', ax =ax[0])
+	sns.kdeplot(data = sebSet, x='Mean', hue='Memory reactivated', cumulative =True, ax =ax[1], common_norm=False, common_grid=True)
+	ax[0].set_title('KDE distribution plot')
+	ax[1].set_title('Cummulative distribution')
+	ax[2].set_title('2 Sample KS test')
+	ax[2].set_axis_off()
+	plt.suptitle(i+' mean pixel intensity')
+
+
+
+	gp1 = sebSet.loc[sebSet['Memory reactivated'] == 'saline', 'Mean']
+	gp2 = sebSet.loc[sebSet['Memory reactivated'] == 'Meth', 'Mean']
+	gp3 = sebSet.loc[sebSet['Memory reactivated'] == 'Heroin', 'Mean']
+
+	vs1_2 = 'Saline vs Meth, pval= '+'{0:.2g}'.format(ks_2samp(gp1, gp2)[1])
+	vs1_3 = 'Saline vs Heroin, pval= '+'{0:.2g}'.format(ks_2samp(gp1, gp3)[1])
+	vs2_3 = 'Meth vs Heroin, pval= '+'{0:.2g}'.format(ks_2samp(gp2, gp3)[1])
+
+	ax[2].text(0, 0.9, vs1_2)
+	ax[2].text(0, 0.85, vs1_3)
+	ax[2].text(0, 0.8, vs2_3)
+	
+	plt.savefig(r'Y:\Madalyn\Analysis\outputs_Distribution'+os.sep+i+'_mean.png')
+
+
+	# https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.ks_2samp.html#scipy.stats.ks_2samp
