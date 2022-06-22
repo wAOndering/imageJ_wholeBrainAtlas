@@ -6,6 +6,7 @@ from cycler import cycler
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import seaborn as sns 
+import numpy as np
 warnings.filterwarnings("ignore")
 
 ## TODO recreate the index from the excel file
@@ -133,13 +134,13 @@ class combineFile():
         self.plate = filePath.split(os.sep)[-1].split('_')[1].split('.')[0]
         self.identifier = self.sID+'_'+self.plate
         self.mainDir = os.path.dirname(filePath)
-        self.measureFile = glob.glob(self.mainDir+os.sep+'*'+self.identifier+'*V2.csv',  recursive=True)[0] #get the list of measures
+        self.measureFile = glob.glob(self.mainDir+os.sep+'*'+self.identifier+'*V2.xlsx',  recursive=True)[0] #get the list of measures
         self.regionFile = glob.glob(self.mainDir+os.sep+'*'+self.identifier+'*.txt',  recursive=True)[0] #get the list of particles and their principal regions
         self.summary = glob.glob(self.mainDir+os.sep+'*'+self.identifier+'*V2.xlsx',  recursive=True)[0]    #get the summary
         #### be careful not to have duplicate file for this 
 
     def flagNAN(self):
-        tmp = pd.read_csv(self.measureFile)
+        tmp = pd.read_excel(self.measureFile)
         tmpNAN = tmp[np.isnan(tmp['IntDen'])]
 
         if len(tmpNAN) != 0: 
@@ -202,7 +203,7 @@ class combineFile():
 
         # make it specific for the file of interest for the brain region of interst
         tmp = self.reIndexCreation()
-        tmpMeas = pd.read_csv(self.measureFile)
+        tmpMeas = pd.read_excel(self.measureFile)
         tmpArea = pd.read_csv(self.regionFile, delimiter='/', names=['c1','c2','c3'])
         test = pd.concat([tmp, tmpMeas, tmpArea], axis=1)
 
@@ -221,7 +222,8 @@ class combineFile():
 
 
 mypath = r'Y:\Madalyn\Analysis'
-files = glob.glob(mypath+'/*/**/*V2.csv',  recursive=True)
+brainRegion = 'NAc'
+files = glob.glob(mypath+'/*/'+brainRegion+'/*V2.xlsx',  recursive=True)
 for i, j in enumerate(files):
     print(i,j)
 
@@ -270,8 +272,8 @@ masterFile = masterFile.dropna(subset=['c3'])
 
 
 ## save the files
-masterFile.to_csv(mypath+os.sep+'masterFile.csv')
-pd.DataFrame({'err':ERROR}).to_csv(mypath+os.sep+'error.csv')
+masterFile.to_csv(mypath+os.sep+'masterFile_'+brainRegion+'.csv')
+pd.DataFrame({'err':ERROR}).to_csv(mypath+os.sep+'error_'+brainRegion+'.csv')
 
 ############################################
 ###### Filtering data out
