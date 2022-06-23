@@ -219,8 +219,14 @@ class combineFile():
 
         return test
 
-
-
+def quickConversion(tmp, myCol=None):
+    tmp = tmp.reset_index()
+    if tmp.columns.nlevels > 1:
+        tmp.columns = ['_'.join(col) for col in tmp.columns] 
+    tmp.columns = tmp.columns.str.replace('[_]','')
+    if myCol:
+        tmp = tmp.rename(columns={np.nan: myCol})
+    return tmp
 
 mypath = r'Y:\Madalyn\Analysis'
 brainRegion = 'NAc'
@@ -331,37 +337,47 @@ from scipy.stats import ks_2samp
 subSetBrainRegion = ['ACB']
 saveFolder = r'Y:\Madalyn\Analysis\NAC_outputs_Distribution'
 os.makedirs(saveFolder, exist_ok=True)
-for i in subSetBrainRegion:
-    sebSet = masterFile[masterFile['Acronym6'] == i]
+masterFile = pd.read_csv(r"Y:\Madalyn\Analysis\masterFile_NAc.csv")
 
-    ### Uncomment this section to 
-    # sebSet = sebSet.groupby(['sID', 'Memory reactivated']).agg({'Mean':np.mean})
-    # sebSet = quickConversion(sebSet)
-    # sebSet = sebSet.sort_values(['Memory reactivated'])
-    # mpl.rcParams['axes.prop_cycle'] = cycler(color=['#fc8d62','#66c2a5','#8da0cb'])
+for j in [True,False]:
+    byAnimal = j
+    for i in subSetBrainRegion:
+        sebSet = masterFile[masterFile['Acronym6'] == i]
+        saveName = saveFolder+os.sep+i+'_mean.png'
 
-    fig, ax = plt.subplots(1,3, figsize=[15,5])
-    sns.kdeplot(data = sebSet, x='Mean', hue='Memory reactivated', ax =ax[0])
-    sns.kdeplot(data = sebSet, x='Mean', hue='Memory reactivated', cumulative =True, ax =ax[1], common_norm=False, common_grid=True)
-    ax[0].set_title('KDE distribution plot')
-    ax[1].set_title('Cummulative distribution')
-    ax[2].set_title('2 Sample KS test')
-    ax[2].set_axis_off()
-    plt.suptitle(i+' mean pixel intensity')
+        ### Uncomment this section to 
+        if byAnimal == True:
+            sebSet = sebSet.groupby(['sID', 'Memory reactivated']).agg({'Mean':np.mean})
+            sebSet = quickConversion(sebSet)
+            sebSet = sebSet.sort_values(['Memory reactivated'])
+            mpl.rcParams['axes.prop_cycle'] = cycler(color=['#fc8d62','#66c2a5','#8da0cb'])
 
-    gp1 = sebSet.loc[sebSet['Memory reactivated'] == 'saline', 'Mean']
-    gp2 = sebSet.loc[sebSet['Memory reactivated'] == 'Meth', 'Mean']
-    gp3 = sebSet.loc[sebSet['Memory reactivated'] == 'Heroin', 'Mean']
+            saveName = saveFolder+os.sep+i+'_Animalmean.png'
 
-    vs1_2 = 'Saline vs Meth, pval= '+'{0:.2g}'.format(ks_2samp(gp1, gp2)[1])
-    vs1_3 = 'Saline vs Heroin, pval= '+'{0:.2g}'.format(ks_2samp(gp1, gp3)[1])
-    vs2_3 = 'Meth vs Heroin, pval= '+'{0:.2g}'.format(ks_2samp(gp2, gp3)[1])
+        fig, ax = plt.subplots(1,3, figsize=[15,5])
+        sns.kdeplot(data = sebSet, x='Mean', hue='Memory reactivated', ax =ax[0])
+        sns.kdeplot(data = sebSet, x='Mean', hue='Memory reactivated', cumulative =True, ax =ax[1], common_norm=False, common_grid=True)
+        ax[0].set_title('KDE distribution plot')
+        ax[1].set_title('Cummulative distribution')
+        ax[2].set_title('2 Sample KS test')
+        ax[2].set_axis_off()
+        plt.suptitle(i+' mean pixel intensity')
 
-    ax[2].text(0, 0.9, vs1_2)
-    ax[2].text(0, 0.85, vs1_3)
-    ax[2].text(0, 0.8, vs2_3)
-    
-    plt.savefig(saveFolder+os.sep+i+'_mean.png')
+        gp1 = sebSet.loc[sebSet['Memory reactivated'] == 'saline', 'Mean']
+        gp2 = sebSet.loc[sebSet['Memory reactivated'] == 'Meth', 'Mean']
+        gp3 = sebSet.loc[sebSet['Memory reactivated'] == 'Heroin', 'Mean']
 
+        vs1_2 = 'Saline vs Meth, pval= '+'{0:.2g}'.format(ks_2samp(gp1, gp2)[1])
+        vs1_3 = 'Saline vs Heroin, pval= '+'{0:.2g}'.format(ks_2samp(gp1, gp3)[1])
+        vs2_3 = 'Meth vs Heroin, pval= '+'{0:.2g}'.format(ks_2samp(gp2, gp3)[1])
+
+        ax[2].text(0, 0.9, vs1_2)
+        ax[2].text(0, 0.85, vs1_3)
+        ax[2].text(0, 0.8, vs2_3)
+        
+
+        plt.savefig(saveName)
 
     # https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.ks_2samp.html#scipy.stats.ks_2samp
+
+
