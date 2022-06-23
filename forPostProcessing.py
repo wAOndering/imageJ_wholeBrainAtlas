@@ -134,13 +134,13 @@ class combineFile():
         self.plate = filePath.split(os.sep)[-1].split('_')[1].split('.')[0]
         self.identifier = self.sID+'_'+self.plate
         self.mainDir = os.path.dirname(filePath)
-        self.measureFile = glob.glob(self.mainDir+os.sep+'*'+self.identifier+'*V2.xlsx',  recursive=True)[0] #get the list of measures
+        self.measureFile = glob.glob(self.mainDir+os.sep+'*'+self.identifier+'*.csv',  recursive=True)[0] #get the list of measures
         self.regionFile = glob.glob(self.mainDir+os.sep+'*'+self.identifier+'*.txt',  recursive=True)[0] #get the list of particles and their principal regions
         self.summary = glob.glob(self.mainDir+os.sep+'*'+self.identifier+'*V2.xlsx',  recursive=True)[0]    #get the summary
         #### be careful not to have duplicate file for this 
 
     def flagNAN(self):
-        tmp = pd.read_excel(self.measureFile)
+        tmp = pd.read_csv(self.measureFile)
         tmpNAN = tmp[np.isnan(tmp['IntDen'])]
 
         if len(tmpNAN) != 0: 
@@ -201,9 +201,10 @@ class combineFile():
             return df
 
 
+
         # make it specific for the file of interest for the brain region of interst
         tmp = self.reIndexCreation()
-        tmpMeas = pd.read_excel(self.measureFile)
+        tmpMeas = pd.read_csv(self.measureFile)
         tmpArea = pd.read_csv(self.regionFile, delimiter='/', names=['c1','c2','c3'])
         test = pd.concat([tmp, tmpMeas, tmpArea], axis=1)
 
@@ -297,10 +298,17 @@ masterFile.to_csv(mypath+os.sep+'masterFile_withExclusion.csv')
 myMeasure = masterFile.columns
 for i,j in enumerate(myMeasure):
     print(i,j)
-myMeasure = myMeasure[12:48]
+# myMeasure = myMeasure[11:47]
+myMeasure = ['Area', 'Mean', 'StdDev', 'Mode', 'Min', 'Max', 'X', 'Y', 'XM', 'YM',
+       'Perim.', 'BX', 'BY', 'Width', 'Height', 'Major', 'Minor', 'Angle',
+       'Circ.', 'Feret', 'IntDen', 'Median', 'Skew', 'Kurt', '%Area',
+       'RawIntDen', 'Slice', 'FeretX', 'FeretY', 'FeretAngle', 'MinFeret',
+       'AR', 'Round', 'Solidity', 'MinThr', 'MaxThr']
 ## get a subset dataset for given brain region
 subSetBrainRegion = masterFile['Acronym6'].unique()[1:]
-subSetBrainRegion = ['ACA', 'ACB', 'PL', 'ILA', 'ORB', 'AI']
+# subSetBrainRegion = ['ACA', 'ACB', 'PL', 'ILA', 'ORB', 'AI']
+subSetBrainRegion = ['ACB']
+os.makedirs(r'Y:\Madalyn\Analysis\NAC_outputs', exist_ok= True)
 for i in subSetBrainRegion:
     sebSet = masterFile[masterFile['Acronym6'] == i]
     for j in myMeasure:
@@ -308,7 +316,7 @@ for i in subSetBrainRegion:
         print(j)
         myFig = i+'_'+j
         params, paramsNest, nobs, nmax = paramsForCustomPlot(data=sebSet, variableLabel='Memory reactivated', subjectLabel='sID', valueLabel= j)
-        customPlot(params, paramsNest, dirName=r'Y:\Madalyn\Analysis\outputs_withExclusion', figName=myFig)
+        customPlot(params, paramsNest, dirName=r'Y:\Madalyn\Analysis\NAC_outputs', figName=myFig)
         plt.close('all')
         # except:
         #   print('ERROR: the file listed were not processed: ')
@@ -319,8 +327,10 @@ for i in subSetBrainRegion:
 ###### For graphing with distribution
 ############################################
 from scipy.stats import ks_2samp
-subSetBrainRegion = ['ACA', 'ACB', 'PL', 'ILA', 'ORB', 'AI']
-
+# subSetBrainRegion = ['ACA', 'ACB', 'PL', 'ILA', 'ORB', 'AI']
+subSetBrainRegion = ['ACB']
+saveFolder = r'Y:\Madalyn\Analysis\NAC_outputs_Distribution'
+os.makedirs(saveFolder, exist_ok=True)
 for i in subSetBrainRegion:
     sebSet = masterFile[masterFile['Acronym6'] == i]
 
@@ -351,7 +361,7 @@ for i in subSetBrainRegion:
     ax[2].text(0, 0.85, vs1_3)
     ax[2].text(0, 0.8, vs2_3)
     
-    plt.savefig(r'Y:\Madalyn\Analysis\outputs_Distribution'+os.sep+i+'_mean.png')
+    plt.savefig(saveFolder+os.sep+i+'_mean.png')
 
 
     # https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.ks_2samp.html#scipy.stats.ks_2samp
