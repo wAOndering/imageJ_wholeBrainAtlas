@@ -229,8 +229,9 @@ def quickConversion(tmp, myCol=None):
     return tmp
 
 mypath = r'Y:\Madalyn\Analysis'
-brainRegion = 'NAc'
-files = glob.glob(mypath+'/*/'+brainRegion+'/*V2.xlsx',  recursive=True)
+brainRegion = 'CeA'#'NAc'
+
+files = glob.glob(mypath+'/*/'+brainRegion+'*/*V2.xlsx',  recursive=True)
 for i, j in enumerate(files):
     print(i,j)
 
@@ -279,6 +280,7 @@ masterFile = masterFile.dropna(subset=['c3'])
 
 
 ## save the files
+print('writing to disk')
 masterFile.to_csv(mypath+os.sep+'masterFile_'+brainRegion+'.csv')
 pd.DataFrame({'err':ERROR}).to_csv(mypath+os.sep+'error_'+brainRegion+'.csv')
 
@@ -311,18 +313,21 @@ myMeasure = ['Area', 'Mean', 'StdDev', 'Mode', 'Min', 'Max', 'X', 'Y', 'XM', 'YM
        'RawIntDen', 'Slice', 'FeretX', 'FeretY', 'FeretAngle', 'MinFeret',
        'AR', 'Round', 'Solidity', 'MinThr', 'MaxThr']
 ## get a subset dataset for given brain region
-subSetBrainRegion = masterFile['Acronym6'].unique()[1:]
+subSetBrainRegion = masterFile['Acronym5'].unique()[1:]
 # subSetBrainRegion = ['ACA', 'ACB', 'PL', 'ILA', 'ORB', 'AI']
-subSetBrainRegion = ['ACB']
-os.makedirs(r'Y:\Madalyn\Analysis\NAC_outputs', exist_ok= True)
-for i in subSetBrainRegion:
-    sebSet = masterFile[masterFile['Acronym6'] == i]
+# subSetBrainRegion = ['ACB']
+subSetBrainRegion = ['BLA', 'LA', 'BMA', 'sAMY', 'CEA','IA','EPI','MTN','MH','LH','PVT']
+parentRegion = ['Acronym5','Acronym5','Acronym5','Acronym5','Acronym6','Acronym6','Acronym6','Acronym6','Acronym7','Acronym7','Acronym7']
+os.makedirs(r'Y:\Madalyn\Analysis'+os.sep+brainRegion+'_outputs', exist_ok= True)
+for k,i in zip(parentRegion,subSetBrainRegion):
+    print(k,i)
+    sebSet = masterFile[masterFile[k] == i]
     for j in myMeasure:
         # try:
-        print(j)
-        myFig = i+'_'+j
+        # print(j)
+        myFig = i+'_'+k+'_'+j
         params, paramsNest, nobs, nmax = paramsForCustomPlot(data=sebSet, variableLabel='Memory reactivated', subjectLabel='sID', valueLabel= j)
-        customPlot(params, paramsNest, dirName=r'Y:\Madalyn\Analysis\NAC_outputs', figName=myFig)
+        customPlot(params, paramsNest, dirName=r'Y:\Madalyn\Analysis'+os.sep+brainRegion+'_outputs', figName=myFig)
         plt.close('all')
         # except:
         #   print('ERROR: the file listed were not processed: ')
@@ -334,15 +339,16 @@ for i in subSetBrainRegion:
 ############################################
 from scipy.stats import ks_2samp
 # subSetBrainRegion = ['ACA', 'ACB', 'PL', 'ILA', 'ORB', 'AI']
-subSetBrainRegion = ['ACB']
-saveFolder = r'Y:\Madalyn\Analysis\NAC_outputs_Distribution'
+saveFolder = r'Y:\Madalyn\Analysis'+os.sep+brainRegion+'_outputs_Distribution'
 os.makedirs(saveFolder, exist_ok=True)
-masterFile = pd.read_csv(r"Y:\Madalyn\Analysis\masterFile_NAc.csv")
+masterFile = pd.read_csv(r'Y:\Madalyn\Analysis\masterFile_'+brainRegion+'.csv')
 
 for j in [True,False]:
     byAnimal = j
-    for i in subSetBrainRegion:
-        sebSet = masterFile[masterFile['Acronym6'] == i]
+    print(j)
+    for k,i in zip(parentRegion,subSetBrainRegion):
+        print(k,i)
+        sebSet = masterFile[masterFile[k] == i]
         saveName = saveFolder+os.sep+i+'_mean.png'
 
         ### Uncomment this section to 
