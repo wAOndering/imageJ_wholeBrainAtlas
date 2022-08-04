@@ -123,6 +123,14 @@ def customPlot(params, paramsNest, dirName='C:/Users/Windows/Desktop/MAINDATA_OU
     plt.savefig(dirName+os.sep+figName+".png")#,     plt.show(block=False)
     plt.close()
 
+def quickConversion(tmp, myCol=None):
+    tmp = tmp.reset_index()
+    if tmp.columns.nlevels > 1:
+        tmp.columns = ['_'.join(col) for col in tmp.columns] 
+    tmp.columns = tmp.columns.str.replace('[_]','')
+    if myCol:
+        tmp = tmp.rename(columns={np.nan: myCol})
+    return tmp
 
 def getbrainAreaLevel(df, substring):
     ### function to have a map of brain region regardless of the level
@@ -152,7 +160,7 @@ class combineFile():
             self.regionFile = glob.glob(self.mainDir+os.sep+'*'+self.identifier,  recursive=True)[0] #get the list of particles and their principal regions
         else:
             self.regionFile = self.regionFile[0]
-        self.summary = glob.glob(self.mainDir+os.sep+'*'+self.identifier+'*V2.xlsx',  recursive=True)[0]    #get the summary
+        self.summary = glob.glob(self.mainDir+os.sep+'*'+self.identifier+'*.xlsx',  recursive=True)[0]    #get the summary
         #### be careful not to have duplicate file for this 
 
     def flagNAN(self):
@@ -239,7 +247,7 @@ class combineFile():
 
 mypath = r'Y:\Madalyn\Analysis'
 brainRegion = 'BLC'
-files = glob.glob(mypath+'/*/*'+brainRegion+'*/*V2.xlsx',  recursive=True)
+files = glob.glob(mypath+'/*/*'+brainRegion+'*/*.xlsx',  recursive=True)
 for i, j in enumerate(files):
     print(i,j)
 
@@ -294,7 +302,7 @@ pd.DataFrame({'err':ERROR}).to_csv(mypath+os.sep+'error_'+brainRegion+'.csv')
 ############################################
 ###### Filtering data out
 ############################################
-toExclude = pd.read_csv(r"Y:\Madalyn\Analysis\toExclude.csv")
+# toExclude = pd.read_csv(r"Y:\Madalyn\Analysis\toExclude.csv")
 # masterFile = pd.read_csv(mypath+os.sep+'masterFile_'+brainRegion+'.csv')
 
 for i,j in toExclude.iterrows():
@@ -313,7 +321,12 @@ masterFile.to_csv(mypath+os.sep+'masterFile_withExclusion.csv')
 myMeasure = masterFile.columns
 for i,j in enumerate(myMeasure):
     print(i,j)
-myMeasure = myMeasure[12:48]
+myMeasure = myMeasure[11:47]
+myMeasure = ['Area', 'Mean', 'StdDev', 'Mode', 'Min', 'Max', 'X', 'Y', 'XM', 'YM',
+       'Perim.', 'BX', 'BY', 'Width', 'Height', 'Major', 'Minor', 'Angle',
+       'Circ.', 'Feret', 'IntDen', 'Median', 'Skew', 'Kurt', '%Area',
+       'RawIntDen', 'Slice', 'FeretX', 'FeretY', 'FeretAngle', 'MinFeret',
+       'AR', 'Round', 'Solidity', 'MinThr', 'MaxThr']
 ## get a subset dataset for given brain region
 # subSetBrainRegion = masterFile['Acronym6'].unique()[1:]
 subSetBrainRegion = ['RSP', 'BLA', 'BMA', 'LA', 'HIP', 'CEA', 'IA']
@@ -340,38 +353,49 @@ for i in subSetBrainRegion:
 ############################################
 from scipy.stats import ks_2samp
 
-for i in subSetBrainRegion:
-    b = getbrainAreaLevel(masterFile, i)
-    sebSet = masterFile[masterFile[b] == i]
+saveFolder = r'Y:\Madalyn\Analysis'+os.sep+brainRegion+'_outputs_Distribution'
+os.makedirs(saveFolder, exist_ok=True)
 
-    ### Uncomment this section to 
-    # sebSet = sebSet.groupby(['sID', 'Memory reactivated']).agg({'Mean':np.mean})
-    # sebSet = quickConversion(sebSet)
-    # sebSet = sebSet.sort_values(['Memory reactivated'])
-    # mpl.rcParams['axes.prop_cycle'] = cycler(color=['#fc8d62','#66c2a5','#8da0cb'])
+for j in [True,False]:
+    byAnimal = j
+    for i in subSetBrainRegion:
+        b = getbrainAreaLevel(masterFile, i)
+        sebSet = masterFile[masterFile[b] == i]
+        saveName = saveFolder+os.sep+i
 
-    fig, ax = plt.subplots(1,3, figsize=[15,5])
-    sns.kdeplot(data = sebSet, x='Mean', hue='Memory reactivated', ax =ax[0])
-    sns.kdeplot(data = sebSet, x='Mean', hue='Memory reactivated', cumulative =True, ax =ax[1], common_norm=False, common_grid=True)
-    ax[0].set_title('KDE distribution plot')
-    ax[1].set_title('Cummulative distribution')
-    ax[2].set_title('2 Sample KS test')
-    ax[2].set_axis_off()
-    plt.suptitle(i+' mean pixel intensity')
+        fig, ax = plt.subplots(1,3, figsize=[15,5])
+        sns.kdeplot(data = sebSet, x='Mean', hue='Memory reactivated', ax =ax[0])
+        sns.kdeplot(data = sebSet, x='Mean', hue='Memory reactivated', cumulative =True, ax =ax[1], common_norm=False, common_grid=True)
+        ax[0].set_title('KDE distribution plot')
+        ax[1].set_title('Cummulative distribution')
+        ax[2].set_title('2 Sample KS test')
+        ax[2].set_axis_off()
+        plt.suptitle(i+' mean pixel intensity')
 
-    gp1 = sebSet.loc[sebSet['Memory reactivated'] == 'saline', 'Mean']
-    gp2 = sebSet.loc[sebSet['Memory reactivated'] == 'Meth', 'Mean']
-    gp3 = sebSet.loc[sebSet['Memory reactivated'] == 'Heroin', 'Mean']
+        gp1 = sebSet.loc[sebSet['Memory reactivated'] == 'saline', 'Mean']
+        gp2 = sebSet.loc[sebSet['Memory reactivated'] == 'Meth', 'Mean']
+        gp3 = sebSet.loc[sebSet['Memory reactivated'] == 'Heroin', 'Mean']
 
-    vs1_2 = 'Saline vs Meth, pval= '+'{0:.2g}'.format(ks_2samp(gp1, gp2)[1])
-    vs1_3 = 'Saline vs Heroin, pval= '+'{0:.2g}'.format(ks_2samp(gp1, gp3)[1])
-    vs2_3 = 'Meth vs Heroin, pval= '+'{0:.2g}'.format(ks_2samp(gp2, gp3)[1])
+        vs1_2 = 'Saline vs Meth, pval= '+'{0:.2g}'.format(ks_2samp(gp1, gp2)[1])
+        vs1_3 = 'Saline vs Heroin, pval= '+'{0:.2g}'.format(ks_2samp(gp1, gp3)[1])
+        vs2_3 = 'Meth vs Heroin, pval= '+'{0:.2g}'.format(ks_2samp(gp2, gp3)[1])
 
-    ax[2].text(0, 0.9, vs1_2)
-    ax[2].text(0, 0.85, vs1_3)
-    ax[2].text(0, 0.8, vs2_3)
+        ax[2].text(0, 0.9, vs1_2)
+        ax[2].text(0, 0.85, vs1_3)
+        ax[2].text(0, 0.8, vs2_3)
+
+        plt.savefig(saveName+'_mean.png')
+
+                ### Uncomment this section to 
+        if byAnimal == True:
+            sebSet = sebSet.groupby(['sID', 'Memory reactivated']).agg({'Mean':np.mean})
+            sebSet = quickConversion(sebSet)
+            sebSet = sebSet.sort_values(['Memory reactivated'])
+            mpl.rcParams['axes.prop_cycle'] = cycler(color=['#fc8d62','#66c2a5','#8da0cb'])
+
+            saveName = saveName+'_Animalmean.png'
     
-    plt.savefig(r'Y:\Madalyn\Analysis\outputs_Distribution'+os.sep+i+'_mean.png')
+    
 
 
     # https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.ks_2samp.html#scipy.stats.ks_2samp
