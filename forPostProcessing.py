@@ -363,6 +363,16 @@ for j in [True,False]:
         sebSet = masterFile[masterFile[b] == i]
         saveName = saveFolder+os.sep+i
 
+
+        if byAnimal == True:
+            sebSet = sebSet.groupby(['sID', 'Memory reactivated']).agg({'Mean':np.mean})
+            sebSet = quickConversion(sebSet)
+            sebSet = sebSet.sort_values(['Memory reactivated'])
+            mpl.rcParams['axes.prop_cycle'] = cycler(color=['#fc8d62','#66c2a5','#8da0cb'])
+
+            saveName = saveName+'_Animalmean.png'
+
+
         fig, ax = plt.subplots(1,3, figsize=[15,5])
         sns.kdeplot(data = sebSet, x='Mean', hue='Memory reactivated', ax =ax[0])
         sns.kdeplot(data = sebSet, x='Mean', hue='Memory reactivated', cumulative =True, ax =ax[1], common_norm=False, common_grid=True)
@@ -386,15 +396,7 @@ for j in [True,False]:
 
         plt.savefig(saveName+'_mean.png')
 
-                ### Uncomment this section to 
-        if byAnimal == True:
-            sebSet = sebSet.groupby(['sID', 'Memory reactivated']).agg({'Mean':np.mean})
-            sebSet = quickConversion(sebSet)
-            sebSet = sebSet.sort_values(['Memory reactivated'])
-            mpl.rcParams['axes.prop_cycle'] = cycler(color=['#fc8d62','#66c2a5','#8da0cb'])
 
-            saveName = saveName+'_Animalmean.png'
-    
     
 
 
