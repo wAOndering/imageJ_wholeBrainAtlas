@@ -163,6 +163,13 @@ class combineFile():
         self.summary = glob.glob(self.mainDir+os.sep+'*'+self.identifier+'*.xlsx',  recursive=True)[0]    #get the summary
         #### be careful not to have duplicate file for this 
 
+    def HPClim(self):
+        #sepcial case for ventral hippocampus
+        HPClim = pd.read_csv(r'Y:\Madalyn\Analysis\ycoord_list-vHPC.csv')
+        tmp = HPClim.loc[HPClim['file']==self.identifier,'y'].item()
+
+        return tmp
+
     def flagNAN(self):
         tmp = pd.read_excel(self.measureFile)
         tmpNAN = tmp[np.isnan(tmp['IntDen'])]
@@ -246,7 +253,7 @@ class combineFile():
 
 
 mypath = r'Y:\Madalyn\Analysis'
-brainRegion = 'BLC'
+brainRegion = 'vHPC'
 files = glob.glob(mypath+'/*/*'+brainRegion+'*/*.xlsx',  recursive=True)
 for i, j in enumerate(files):
     print(i,j)
@@ -262,11 +269,15 @@ for i, j in enumerate(files):
 masterFile = []
 ERROR = []
 filesWithNan = []
+narrowdown = True
 for i in files:
     print(i)
     try:
         tmpDat = combineFile(i)
         tmp = tmpDat.combineAreaMeasure()
+        if narrowdown == True:
+            ylim = tmpDat.HPClim()
+            tmp = tmp[tmp['Y']<ylim]
         masterFile.append(tmp)
         # tmpNaN = tmpDat.flagNAN()
         # filesWithNan.append(tmpNaN)
@@ -274,6 +285,9 @@ for i in files:
         print('ERROR: the file listed were not processed: ')
         print(i)
         ERROR.append(i)
+
+if narrowdown == True:
+    brainRegion = 'vHPC-ventralOnly'
 # filesWithNan = pd.concat(filesWithNan)
 # filesWithNan.to_csv(mypath+os.sep+'flagedNAN.csv')
 masterFile = pd.concat(masterFile)
@@ -331,7 +345,8 @@ myMeasure = ['Area', 'Mean', 'StdDev', 'Mode', 'Min', 'Max', 'X', 'Y', 'XM', 'YM
 # subSetBrainRegion = masterFile['Acronym6'].unique()[1:]
 subSetBrainRegion = ['RSP', 'BLA', 'BMA', 'LA', 'HIP', 'CEA', 'IA']
 # ['ACA', 'ACB', 'PL', 'ILA', 'ORB', 'AI']
-
+subSetBrainRegion = ['VTA', 'PAG', 'HIP', 'HY', 'LZ']
+subSetBrainRegion = ['HIP']
 
 for i in subSetBrainRegion:
     b = getbrainAreaLevel(masterFile, i)
